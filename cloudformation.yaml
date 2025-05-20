@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+  Generator: "former2"
+Description: ""
+Resources:
+  IAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/service-role/"
+      RoleName: "AWSGlueServiceRole-deglue"
+      AssumeRolePolicyDocument: !Sub "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"glue.amazonaws.com\"},\"Action\":\"sts:AssumeRole\",\"Condition\":{\"StringEquals\":{\"aws:SourceAccount\":\"${AWS::AccountId}\"}}},{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"glue.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+      - !Sub "arn:aws:iam::${AWS::AccountId}:policy/service-role/AWSGlueServiceRole-deglue-EZCRC-s3Policy"
+      - "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
+      - "arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess"
+      - "arn:aws:iam::aws:policy/service-role/AWSGlueServiceNotebookRole"
+
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "deglue1"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        -
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+          BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+        -
+          ObjectOwnership: "BucketOwnerEnforced"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  S3Bucket2:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub "aws-glue-assets-${AWS::AccountId}-${AWS::Region}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        -
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+          BucketKeyEnabled: false
+      OwnershipControls:
+        Rules:
+        -
+          ObjectOwnership: "BucketOwnerEnforced"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  GlueJob:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Name: "deglue-job"
+      Description: ""
+      Role: !GetAtt IAMRole.Arn
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      Command:
+        Name: "glueetl"
+        ScriptLocation: !Sub "s3://${S3Bucket2}/scripts/deglue-job.py"
+        PythonVersion: "3"
+      DefaultArguments:
+        --enable-metrics: "true"
+        --enable-spark-ui: "true"
+        --spark-event-logs-path: !Sub "s3://${S3Bucket2}/sparkHistoryLogs/"
+        --enable-job-insights: "false"
+        --enable-observability-metrics: "true"
+        --enable-glue-datacatalog: "true"
+        --job-bookmark-option: "job-bookmark-disable"
+        --job-language: "python"
+        --TempDir: !Sub "s3://${S3Bucket2}/temporary/"
+        --enable-auto-scaling: "true"
+      MaxRetries: 0
+      AllocatedCapacity: 2
+      Timeout: 10
+      GlueVersion: "5.0"
+      MaxCapacity: 2
+      NumberOfWorkers: 2
+      WorkerType: "G.1X"
+
