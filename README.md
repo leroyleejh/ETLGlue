@@ -10,9 +10,9 @@ This repository contains a simple ETL (Extract, Transform, Load) job implemented
 ## Usage
 
 1. Configure the AWS Glue job with the appropriate source and target locations.
-2. Deploy the job script to AWS Glue.
+2. Deploy the [job script](main.py) to AWS Glue.
 3. Run the job and monitor its progress in the AWS Glue console.
-4. Sample cloudformation is attached to
+4. Sample [cloudformation](cloudformation.yaml) is attached to show the necessary permission required for the glue job to run
 
 ## Limitations
 - The S3 bucket name is hardcoded in the script, which reduces flexibility.
